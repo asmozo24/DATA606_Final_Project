@@ -1,0 +1,787 @@
+---
+title: |
+  <center> The City University of New York School of Professional Studies </center>
+  <br>
+  <center>  Statistics and Probability for Data Analytics (DATA 606) </center>
+author: "Alexis Mekueko"
+date: "12/08/2020"
+output:
+  pdf_document: default
+
+
+subtitle: 'Final Project: Data Insights to Improve school Education System'  
+
+---
+
+
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load-packages, results='hide',warning=FALSE, message=FALSE, echo=FALSE}
+
+library(tidyverse) #loading all library needed for this assignment
+
+library(data.table)
+
+library(DBI)
+library(dbplyr)
+
+ library(rstudioapi)
+ library(odbc)
+ library(RSQLite)
+library(gplots)
+library(ggplot2)
+library(scales)
+
+library(qqplotr)
+library(Hmisc)
+library(statsr)
+library(GGally)
+library(DATA606)
+library(hrbrthemes)
+#library(psych)
+
+
+```
+
+
+
+## Part 2 - Introduction
+Many students failed in school not because of thier intelligence. There are numerous factors that contribute to students success. In other words, students success in school relies upon on the ability of the school education system to take appropriate measures on these factors. These factors are : weekly studying time, extra-curricular activities, travel time to school, family educational support, student desire to pursue higher education, companionship, parents'job type, etc. Therefore, in this project, we interested in studying these factors to determine any correlation that could lead to students failure in a taken course. If none, then we would like to determine the factors which contribute to success. This is done in order for the school education system to keep track of success and to improve the factors that negatively impact students success.
+
+Github Link: https://github.com/asmozo24/DATA606_Final_Project
+
+Web link: https://rpubs.com/amekueko/697306
+          https://rpubs.com/amekueko/701875
+
+### Part 2a - Benefits
+The interest in experimental study related to school will have the advantage to help schools’ officials in decision making in term of improving school education system. This project is seeking to make the collected data about ("GP" - Gabriel Pereira or "MS" - Mousinho da Silveira) schools speaks or reveals useful information. This experiemental study aims to help school's officials in planning strategy for better school education system.  Ultimately, I plan to become a consultant using my skills as data scientist in various domain of the society to present meaningful report to government entities, companies, and organizations to help them in decision making. So, this project will contribute to building skills necessary for one to be successful in data science.
+
+### Part 2b - Research question
+Do you students from Gabriel Pereira (GP) school do better in Math course than those from Mousinho da Silveira (MS) school? We could also explore the corelation between factors time and students performance. We could also verify a popular assumption out there. For instance, there are some studies out there suggesting that the amount of study time likely affects students' performance. Let's verify this assumption in this project. The question being, do students studying at least 10hrs weekly do well in Math course than those spending lesser time? 
+
+
+## Part 3 - Data 
+
+### Part 3a - Data Acquisition 
+Data is collected or made available by archive.ics.uci.edu: The UCI Machine Learning Repository is a collection of databases, domain theories, and data generators that are used by the machine learning community for the empirical analysis of machine learning algorithms. The archive was created as an ftp archive in 1987 by David Aha and fellow graduate students at UC Irvine. The current version of the web site was designed in 2007 by Arthur Asuncion and David Newman, and this project is in collaboration with Rexa.info at the University of Massachusetts Amherst. Funding support from the National Science Foundation is gratefully acknowledged. 
+
+### Part 3b - Data source
+We found some interesting dataset from data source: https://archive.ics.uci.edu/ml/machine-learning-databases/00320/. 
+This data is about a study on students(395) taking math or/and portuguese language courses. Each case represents a student at one of the two schools ("GP" - Gabriel Pereira or "MS" - Mousinho da Silveira). There are 395 observations in the given dataset. The data is pretty rich with a txt file that described all variables in the data. Therefore there is no need to rename the columns. The orignal data format is comma delimited and rendering from R was not easy. So, we used excel with one attemp to fix it. We are interested in the student taking Math course.
+
+- Data available --> https://github.com/asmozo24/DATA606_Project_Proposal
+
+Using R to acquire data
+
+```{r, echo=FALSE}
+
+# load the text file which has the description of all the variable.
+variable_details <- read.delim("https://raw.githubusercontent.com/asmozo24/DATA607_Final_Project/main/student.txt", stringsAsFactors=FALSE)
+student_math <- read.csv("https://raw.githubusercontent.com/asmozo24/DATA607_Final_Project/main/student-math.csv", stringsAsFactors=FALSE)
+student_portuguese <- read.csv("https://raw.githubusercontent.com/asmozo24/DATA607_Final_Project/main/student-portuguese.csv", stringsAsFactors=FALSE)
+
+```
+
+
+<!-- # ```{r, connection to sql} -->
+<!-- #  -->
+<!-- #  -->
+<!-- # # establishing the connection to SQL server to access db -->
+<!-- # con <- dbConnect(odbc(),  -->
+<!-- #   # server type -->
+<!-- #   Driver = "SQL Server",  -->
+<!-- #   #server name -->
+<!-- #   Server = "ATM\\ATMSERVER", -->
+<!-- #   # this is one of the db I want to import -->
+<!-- #   Database = "Final_ProjectDB",  -->
+<!-- #   UID = "Alex", -->
+<!-- #   # password required -->
+<!-- #   PWD = rstudioapi::askForPassword("Database password"),  -->
+<!-- #   ort = 1433) -->
+<!-- #  -->
+<!-- #   #dbListFields(con, "student_math") -->
+<!-- #   #student_math <- dbReadTable(con, "student_math")  -->
+<!-- # #barplot(table(Customer_Location$Country, color = rainbow()))  -->
+<!-- #  -->
+<!-- # ``` -->
+
+
+## Part 4 - Data Preparation / Data Wrangling
+
+### Part 4a - Cleaning data
+
+What is the structure of data?
+
+```{r, echo=FALSE}
+
+head(glimpse(student_math))
+
+#str(student_portuguese)
+#print("Data frame is composed of character, boolean and numerical.")
+view(student_math)
+#head(student_math)
+#print("Let's convert all chr type to factor and int type to numeric")
+#student_math
+#summary(student_math)
+dim1 <- dim(student_math)
+dim2 <- dim(student_portuguese)
+#na1 <- is.na(student_math) # checking if there is a missing data in the dataset, return is yes
+sum(is.na(student_math)) # file to big, checking the sum of all missing data (return is 0 missing data)
+sum(is.na(student_portuguese))
+
+```
+
+## Part 5 - Explore Data
+
+Let's take a look at the data frame...
+
+```{r, echo=FALSE}
+
+# let's create a dummy variable for the purporse of data visualization
+VarFunc <- function(df, x){
+  for (i in 1:(nrow(df))) {
+  if (x[i] < 20) {
+    df$x[i] <- "All"
+  }
+  }
+  return(df$x)
+}
+
+# Function to auto generate students numerical order ...not to sure if that will help
+Var2Func <- function(df, x){
+  for (i in 1:(nrow(df))) {
+  if (x[i] < 20) {
+    df$x[i] <- i
+  }
+  }
+  return(df$x)
+}
+  
+# Calling the function    
+student_math$Var <-VarFunc(student_math, student_math$G1)
+student_portuguese$Var <-VarFunc(student_portuguese, student_portuguese$G1)
+student_math$Var2 <-Var2Func(student_math, student_math$G1)
+#head(student_math)
+#head(student_portuguese)
+
+```
+
+- Amount the 33 variables in the data frame, there are 03 variables (G1, G2 and G3) which represent the students's grades.
+- These 03 variables are interesting as there are measures of students performances in the registered courses.              
+
+    G1: first period grade (numeric: from 0 to 20)
+    G2: second period grade (numeric: from 0 to 20)
+    G3: final grade (numeric: from 0 to 20)
+
+Let's keep in mind the research questions. Do students at "GP" - Gabriel Pereira school or "MS" - Mousinho da Silveira school perform well? If yes, what are the factors contributing to students's success? If no, what are the factors leading to students' poor performance? One way to go about these questions is to look at the 03 variables. These 03 variable can summary to one key element-That element is student's performance. 
+
+Let's take a closer look at these 03 variables. We might throw in a biais by neglecting the fact that there are two schools in the data frame. How significant is each school into the data frame.
+
+```{r, echo=FALSE}
+
+describe(student_math$G3)
+#summary(student_math$G3)
+#print("Students taken Math course distribution from each school are: 88.4% students for Gabriel Pereira School and 11.6% students for Mousinho da Silveira School")
+
+barplot(table(student_math$school), main = "Students in Math Course Distribution per School", xlab = "GP = Gabriel Pereira School, MS = Mousinho da Silveira School", col = c("#d94701", "#238b45")) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, student_math$sex)
+#boxplot(Var2~school, data = student_math, xlab = "GP = Gabriel Pereira School, MS = Mousinho da Silveira School", ylab = "Number of Students", main = "Students Enrolled in Math Course" , col = c("green","purple"))
+```
+
+Students taken Math course distribution from each school are: 
+ * 88.4% students for Gabriel Pereira School
+ * 11.6% students for Mousinho da Silveira School
+
+
+- Actually, we could check the age distribution in the Math course
+
+```{r, echo=FALSE}
+
+describe(student_math$sex)
+ggplot(student_math, aes(x= age, group=Var)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="age") +
+    facet_grid(~Var) +
+    scale_y_continuous(labels = scales::percent)
+
+```
+
+- Age and sex distribution in the Math course
+
+```{r, echo=FALSE}
+ggplot(student_math, aes(x= age, group=sex)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="age") +
+    facet_grid(~sex) +
+    scale_y_continuous(labels = scales::percent)
+
+#ggplot2.barplot(data=student_math, xName="sex", yName='age', groupName="sex")
+
+
+#ggplot(student_math, aes(x=age, y=age, fill=sex)) +   geom_bar(stat='identity', position='dodge')
+
+```
+
+- First, we need to organize the data frame into two data frame that represents the two schools.
+
+```{r, echo=FALSE}
+
+#Function to convert grade points to grade letters.
+gradeFunc <- function(df, grade){
+  for (i in 1:(nrow(df))) {
+  if (grade[i] < 7) {
+    df$grade[i] <- "F"
+  } else if (grade[i] < 10) {
+    df$grade[i] <- "D"
+  } else if (grade[i] < 14) {
+    df$grade[i] <- "C"
+  } else if (grade[i] < 18) {
+    df$grade[i] <- "B"
+  } else {
+    df$grade[i] <- "A"
+  }
+  }
+  return(df$grade)
+}
+
+#gradeFunc <- function(df){.. return df} ...now I can call 
+student_math$grade1 <- gradeFunc(student_math, student_math$G1)
+student_math$grade2 <- gradeFunc(student_math, student_math$G2)
+student_math$grade3 <- gradeFunc(student_math, student_math$G3)
+
+student_portuguese$grade1 <- gradeFunc(student_portuguese, student_portuguese$G1)
+student_portuguese$grade2 <- gradeFunc(student_portuguese, student_portuguese$G2)
+student_portuguese$grade3 <- gradeFunc(student_portuguese, student_portuguese$G3)
+
+view(student_math)
+
+# le't organize data frame
+student_math_MS <- student_math %>%
+  filter ( school == "MS") # select(student_math, )
+head(student_math_MS)
+student_math_GP <- student_math %>%
+  filter ( school == "GP") # select(student_math, )
+student_portuguese_MS <- student_portuguese %>%
+  filter ( school == "MS") # select(student_math, )
+student_portuguese_GP <- student_portuguese %>%
+  filter ( school == "GP") # select(student_math, )
+
+cat("Let's do summary on Math result 1 for students from Gabriel Pereira School\n")
+describe(student_math_GP$G1)
+```
+
+Let's see the mean, max for students from Gabriel Pereira School
+```{r, echo=FALSE}
+
+summary(student_math_GP$G1)
+#summary(student_math_MS$G2)
+#summary(student_math_MS$G3)
+
+
+```
+
+   
+##  Part 6 - Data Analysis
+
+- Let's take a look at students performance on the Math Exam 1. 
+- We are interested in students performance in Math course 
+
+```{r, echo=FALSE}
+
+#barplot(table(student_math_GP$G1), main = "Students Math Graded Distribution from Gabriel Pereira School", xlab = " Students' grade on Math Exam 1", col = rainbow(20)) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, student_math$sex)
+boxplot(G1~school, data = student_math, xlab = "GP = Gabriel Pereira School, MS = Mousinho da Silveira School",
+   ylab = "Math Exam1 Graded on 20 points", main = "Students Math Exam1 Result per School" , col = c("green","purple"))
+
+cat("\n Students performance in Math Exam 1 from Gabriel Pereira School\n")
+  ggplot(student_math_GP, aes(x= (G1))) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Percent") +
+    scale_y_continuous(labels=percent)
+
+```
+
+- Let's see students performance in Math Exam 1 from Mousinho da Silveira school.
+
+```{r, echo=FALSE}
+
+  ggplot(student_math_MS, aes(x= (G1))) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Percent") +
+    scale_y_continuous(labels=percent)
+  
+cat("A better representation is graded letters")
+
+#barplot(table(student_math_GP$G1), main = "Students Math Exam1 Graded Distribution from Gabriel Pereira School", xlab = " Math Exam 1 Graded out of 20 points", ylab = "Students",  col = rainbow(6)) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, student_math$sex)
+
+```
+
+- Let's see the math exam1 graded from the two schools.
+
+```{r, echo=FALSE}
+#barplot(table(student_math_GP$grade1), main = "Students Math Exam1 Graded Distribution from Gabriel Pereira School", xlab = " Math Exam 1 Graded", ylab = "Students",  col = rainbow(6)) #, label = scales::percent(prop.table(student_math_GP$grade1))) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, student_math$sex)
+
+#cat("\n\n")
+
+ggplot(student_math, aes(x= grade1,  group=sex)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="Math Exam 1 Graded") +
+    facet_grid(~sex) +
+    scale_y_continuous(labels = scales::percent)
+```
+
+-Let's see the math exam2 graded from the two schools.
+
+```{r, echo=FALSE}
+
+ggplot(student_math, aes(x= grade2, group=school)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="Math Exam 2 Graded") +
+    facet_grid(~school) +
+    scale_y_continuous(labels = scales::percent)
+#describe(student_math_GP$grade3)
+#describe(student_math_MS$grade3)
+#describe(student_math$grade3)
+```
+
+- Let's see the math final grade from the two schools.
+
+```{r, echo=FALSE}
+ggplot(student_math, aes(x= grade3, group=school)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="Math Final Grade") +
+    facet_grid(~school) +
+    scale_y_continuous(labels = scales::percent)
+
+#barplot(table(student_math_MS$grade1), main = "Students Math Exam1 Graded Distribution from Mousinho da Silveira School", xlab = " Math Exam 1 Graded", ylab = "Students",  col = rainbow(6)) #, label = scales::percent(prop.table(student_math_GP$grade1))) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, studen
+#describe(student_portuguese_GP$grade1)
+```
+
+- Let's see the Portuguese Exam1 graded from the two schools
+
+```{r, echo=FALSE}
+
+ggplot(student_portuguese, aes(x= grade1, group=school)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="Portuguese Exam1 Graded") +
+    facet_grid(~school) +
+    scale_y_continuous(labels = scales::percent)
+```
+
+- Let's see the Portuguese Exam2 graded from the two schools.
+
+
+```{r, echo=FALSE}
+
+ggplot(student_portuguese, aes(x= grade2, group=school)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="Portuguese Exam2 Graded") +
+    facet_grid(~school) +
+    scale_y_continuous(labels = scales::percent)
+#barplot(table(student_portuguese_GP$grade1), main = "Students Portuguese Exam1 Graded Distribution from Gabriel Pereira School", xlab = " Math Exam 1 Graded", ylab = "Students",  col = rainbow(6)) #, label = scales::percent(prop.table(student_math_GP$grade1))) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, studen
+#head(student_math_GP)
+```
+
+- Let's see the Portuguese Final grade from the two schools
+
+```{r, echo=FALSE}
+
+ggplot(student_portuguese, aes(x= grade3, group=school)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students", fill="Portuguese Final Grade") +
+    facet_grid(~school) +
+    scale_y_continuous(labels = scales::percent)
+
+```
+
+- Let's see Multiple comparison or group barplots to show grade 1, 2 and 3 or G1, G2, G3
+- To see overall performance trend from grade 1 to final grade 
+
+```{r, echo=FALSE}
+
+#Group all the grade (grade 1, grade 2, grade 3) in one plot
+all_Math_Grade <- select(student_math_GP, grade1, grade2, grade3)
+#all_Math_Grade2 <- table(all_Math_Grade$grade3)
+
+
+#barplot(all_Math_Grade2, beside = TRUE, main = "Students Math Exam1 Graded Distribution from Gabriel Pereira School", xlab = " Math Exam 1 Graded", ylab = "Students",  col = rainbow(6)) #, label = scales::percent(prop.table(student_math_GP$grade1))) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, studen
+#head(student_math_GP)
+
+
+
+barplot(as.matrix(table(select(student_math_GP, grade1, grade2, grade3))), beside = TRUE, main = "Students Math Exam1 Graded Distribution from Gabriel Pereira School", xlab = " Math Exam 1 Graded", ylab = "Students",  col = rainbow(6)) #, label = scales::percent(prop.table(student_math_GP$grade1))) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, studen
+#head(student_math_GP)
+
+
+
+#barplot((select(student_math_GP, G1, G2, G3)), beside = TRUE, main = "Students Portuguese Exam1 Graded Distribution from Gabriel Pereira School", xlab = " Math Exam 1 Graded", ylab = "Students",  col = rainbow(6)) #, label = scales::percent(prop.table(student_math_GP$grade1))) #, width = c(0.4,0.1) ) #~ student_math$studytime ) #, studen
+#head(student_math_GP)
+
+```
+
+- Let's take a look at the students performance 
+
+```{r, echo=FALSE}
+
+# this part answer the question which school does better in Math
+#boxplot(student_math_GP$G3~student_math_MS$G3)
+
+describe(student_math_GP$grade3)
+describe(student_math_MS$grade3)
+summary(student_math_GP$G3)
+summary(student_math_MS$G3)
+plotmeans(G3~school, data = student_math, main = "Average Students Final Grade in Math from GP and MS", xlab = "GP = Gabriel Pereira School, MS = Mousinho da Silveira School", ylab = "Math Final Grade on 20 points", frame = FALSE)
+
+boxplot(G3~school, data = student_math, xlab = "GP = Gabriel Pereira School, MS = Mousinho da Silveira School",
+   ylab = "Math Final Grade on 20 points", main = "Students Math Final Grade per School" , col = c("green","purple"))
+
+describe(student_portuguese_GP$grade3)
+describe(student_portuguese_MS$grade3)
+boxplot(G3~school, data = student_portuguese, xlab = "GP = Gabriel Pereira School, MS = Mousinho da Silveira School",
+   ylab = "Portugue Grade on 20 points", main = "Students Portuguese Final Grade per School" , col = c("green","purple"))
+
+
+```
+
+At this point, we can either explore students who did well in Math with a final grade of A or B to see if they do something than those who final grade below C. Alternative way is to explore students with the final grade of D or F. 
+
+## Part 7 - Inference
+
+```{r, echo=FALSE}
+
+target <- c("A", "B")
+student_mathTop<- student_math %>%
+  filter ( grade3 %in% target)
+
+#Another way 
+student_mathTop <- student_math[student_math$grade3 %in% c("A", "B"), ]
+student_mathBottom <- student_math[student_math$grade3 %in% c("D", "F"), ]
+
+view(student_mathTop)
+view(student_mathBottom)
+#head(student_mathTop)
+
+```
+
+### Part 7a - Problem
+
+- We have two interesting groups for our testing. Let's test the variable absence. 
+- There is a problem here: one is the two data frames (student_mathTop and student_mathBottom) which don't have the same dimension. 
+- Thus, the difference for variable absence will not be the same.
+- One way to go about solving this issue is to pre-populate the variable (absence) with shorter lenght using insignificant number, but what if we want to test other variables as well. 
+
+- Second way, we can keep the original data frame "student_math", filter by grade. 
+- Then we assign a new variable which will be categorical of two type of students( T= top student [Final grade = A or B] and B = bottom student[Final grade = D or F]). 
+- This has the advantage of giving us more freedom in testing other variable on this new data frame.
+
+- Before we impliment the above solution, let's use function summary to check the mean absence for each type of student.
+- We are concerned that the difference in total number of students from each data frame might create a biais in this summary. But, at least summary will give us a glimpse of average absences. 
+
+#### The average absence from the top students registered in Math course.
+
+```{r, echo=FALSE}
+
+summary(student_mathTop$absences)
+
+```
+
+- The average absence from the Bottom students.
+
+```{r, echo=FALSE}
+summary(student_mathBottom$absences)
+
+```
+
+* We can visualize this mean average by calling a scatter plot.
+
+- To do this, we can call the function for dummy variable created above.
+
+```{r, echo=FALSE}
+
+# Calling the function    
+
+student_mathTop$Var3 <-Var2Func(student_mathTop, student_mathTop$G1)
+student_mathBottom$Var3 <-Var2Func(student_mathBottom, student_mathBottom$G1)
+
+#ggplot(student_mathTop, aes(x = Var3, y = absences, color = grade3), main = "Top Students Absences Distribution in Math Course", xlab = "Students Assigned Number in class", ylab = "Number of Absences") + geom_point(size = 4) + theme_ipsum() #theme_bw(), theme_light, theme_dark
+
+ggplot(student_mathTop, aes(x = Var3, y = absences)) +
+  geom_point(size = 4, aes(color = (grade3))) +
+  theme_dark() +
+  labs( title = "Top Students Absences Distribution in Math Course", x = "Students Assigned Number in class", y = "Number of Absences")
+
+#plot(x = student_mathTop$Var3, y = student_mathTop$absences, color = student_mathTop$grade3, main = "Top Students Absences Distribution in Math Course", xlab = "Students Assigned Number in class", ylab = "Number of Absences", pch = 16)
+
+#head(student_math)
+#head(student_portuguese)
+
+```
+
+- Let's see the number of absences from the bottom students registered in Math Course.
+
+```{r, echo=FALSE}
+
+ggplot(student_mathBottom, aes(x = Var3, y = absences)) +
+  geom_point(size = 4, aes(color = (grade3))) +
+  theme_dark() +
+  labs( title = "Bottom Students Absences Distribution in Math Course", x = "Students Assigned Number in class", y = "Number of Absences")
+
+
+```
+
+Now, let's create the two type of students.
+```{r, echo=FALSE}
+
+student_mathTB <- student_math[student_math$grade3 %in% c("A", "B", "D", "F"), ]
+
+#Let's recall our gradeFunc
+TB_Func <- function(df, grade){
+  for (i in 1:(nrow(df))) {
+  if (grade[i] == "A") {
+    df$grade[i] <- "T"
+  } else if (grade[i] == "B") {
+    df$grade[i] <- "T"
+  } else if (grade[i] == "D") {
+    df$grade[i] <- "B"
+  } else {
+    df$grade[i] <- "B"
+  }
+  }
+  return(df$grade)
+}
+
+student_mathTB$TB <- TB_Func(student_mathTB, student_mathTB$grade3)
+
+```
+
+- Question: is there a difference in absence between top and bottom students in Math course?
+
+```{r, echo=FALSE}
+
+#summary(student_mathTB$absences)
+#describeBy(student_mathTB$absences, group=student_mathTB$TB, mat=FALSE, skew=TRUE)[,c(2,4:7)]
+#describeBy()
+# What is boxplot will look like?
+boxplot(absences~TB, data = student_mathTB, xlab = "T = Top student in Math, B = Bottom student in Math",
+   ylab = "Number of Absences", main = "Top-Bottom Students Recorded Absences in Math Course from GP & MS School" , col = c("green","purple"))
+
+#another way
+#ggplot(student_mathTB, aes(x = TB, y = absences)) + geom_boxplot()
+
+
+```
+
+#### Distributions of absences among top and bottom students registered in Math course.
+
+```{r, echo=FALSE}
+
+ggplot(student_mathTB, aes(x = absences)) +
+  geom_histogram(binwidth = 5, col = "blue") +
+  facet_wrap(~TB)
+
+#F4FF00, #6F00FF, #A4FF00, #9DFF00, #E000FF, #FF0035
+```
+
+- Right skewed!
+
+- Let's calculate a 95% confidence interval for the average difference between number of absences for top and bottom students in Math course.
+
+- Assumptions:
+
+    Independence within groups.
+    Independence between groups.
+    Sample size/skew
+
+t-test
+```{r, echo=FALSE}
+
+t.test(absences~TB, data = student_mathTB)
+
+```
+
+### Part 7b - Correlation between amount of study time and result
+
+Conducting a hypothesis test to evaluate whether the average grade is different for those who study at least ten times a week than those who don’t. 
+- H_null: there is no difference in the average grade for those who study at at least ten times a week than those who don’t. - H_alt: there is difference in the average grade for those who study at at least ten times a week than those who don’t.
+- case = students enrolled in Math course 
+- sample is all students from both school (GP and MS)
+
+```{r, echo=FALSE}
+
+# Let's find out if study time affect student performance
+student_math1 <- student_math %>% 
+  mutate(studyTime10 = ifelse(student_math$studytime > 3, "yes", "no"))
+```
+
+Let's see the difference between weekly study time and students final grade in Math
+
+```{r, echo=FALSE}
+
+boxplot(G3 ~ studyTime10, data = student_math1, xlab = "Students Weekly Study Time: Yes = student spent 10+hrs, No = student spent less than 10hrs",
+   ylab = "Students Final Grade in Math", main = "Students Performance in Math based on Weekly Study Time" , col = c("green","purple"))
+
+```
+
+- Let's see the final grade ration between students who study 10+ a week and those who don't in math course. 
+
+```{r, echo=FALSE}
+student_math1 %>%
+  group_by(studyTime10) %>%
+  summarise(meanFinal_grade = mean(G3))
+
+study10plus <- student_math1 %>% 
+  filter(studyTime10 == "yes" )  # & G1 & G2 & G3
+
+study10Less <- student_math1 %>% 
+  filter(studyTime10 == "no" ) 
+
+```
+
+- Let's see the statical information about students final grade in Math based on 10+hrs weekly study time  
+
+```{r, echo=FALSE}
+
+describe(study10plus$grade3)
+cat("\nLet's see the math final grade distribution from the two schools based on 10+hrs weekly study time\n")
+ggplot(study10plus, aes(x= grade3, group=school)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students Studying 10+hrs Weekly", fill="Math Final Grade") +
+    facet_grid(~school) +
+    scale_y_continuous(labels = scales::percent)
+# There is an observed difference, but is this difference statistically significant? In order to answer this question we will conduct a hypothesis test.
+
+```
+
+- Let's see the statical information about students final grade in Math based on less than 10hrs Weekly study time.  
+
+```{r, echo=FALSE}
+
+describe(study10Less$grade3)
+cat("\nLet's see the math final grade distribution from the two schools based on 10+hrs weekly study time\n")
+ggplot(study10Less, aes(x= grade3, group=school)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students Studying Less than 10 hrs Weekly", fill="Math Final Grade") +
+    facet_grid(~school) +
+    scale_y_continuous(labels = scales::percent)
+# There is an observed difference, but is this difference statistically significant? In order to answer this question we will conduct a hypothesis test.
+
+ggplot(study10Less, aes(x= grade3, group=Var)) + 
+    geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
+    geom_text(aes( label = scales::percent(..prop..),
+                   y= ..prop.. ), stat= "count", vjust = -.5) +
+    labs(y = "Students Studying Less than 10 hrs Weekly", fill="Math Final Grade") +
+    facet_grid(~Var) +
+    scale_y_continuous(labels = scales::percent)
+
+
+```
+
+- Computing the hypothesis test.
+
+```{r, echo=FALSE}
+# This can be rewrite as a function
+
+n_yes <- nrow(study10plus) 
+n_no <- nrow(study10Less)
+df <- n_yes - 1
+mean_no <- mean(study10Less$G3)
+mean_yes <- mean(study10plus$G3)
+sd_no <- sd(study10Less$G3)
+sd_yes <- sd(study10plus$G3)
+SE <- sqrt( (sd_yes^2)/n_yes + (sd_no^2)/n_no)
+t_value <- qt(0.05/2, df, lower.tail = FALSE)
+point_estimate <-  mean_yes - mean_no
+lower_CI <- point_estimate - t_value * SE
+upper_CI <- point_estimate + t_value * SE
+lower_CI 
+upper_CI
+p_value <- 2*pt(t_value, df, lower.tail = FALSE)
+p_value
+
+
+```
+The p-value = 0.05 < alpha (0.1), thus we reject the null hypothesis. Thus, there is difference in the average grade for those who study at at least ten times a week than those who don’t.
+
+
+
+<!-- sentiment analysis -->
+<!-- ```{r, echo=FALSE} -->
+
+<!-- textM <- as.character(student_math$G1, student_math$G2, student_math$G3) -->
+
+<!-- head(textM) -->
+<!-- glimpse(textM) -->
+
+<!-- ```` -->
+
+## Part 8 - Conclusion
+
+### Part 8a - Findings
+- In this study, there are 395 students both from Gabriel Pereira (GP) School and Mousinho da Silveira (MS) School.
+- These students are enrolled in Math course of which 349 are from GP and 46 from MS.
+- Based on the final grade in Math course, students from GP have a higher average grade than those from MS.
+- Statistically, the mean for students from GP in Math course is 10.49.
+- Statistically, the mean for students from MS in Math course is 9.85.
+- The majority of students from both school received a "C" grade.
+- Statiscally, 32.38% students from GP failed the Math course.
+- Statistically, 36.96% students from MS failed the Math course.
+- The analysis shows that students from both schools don't perform well in Math.
+- There is a significant difference in number of absences in Math course for top and bottom students. 
+- In order words, students who got a final grade of "A" or "B" in Math course were lesser absent than those who got fail the Math course(D and F grades). 
+- The conducted test in this study has proved with 95% confidence interval that students who do studying at least 10hrs in a week do well in Math course than those who spent lesser time.
+- Shockingly, there is no student from MS who studies at least 10hrs in a week.
+- Overall, students from GP did better in Math course than those from MS.
+
+### Part 8b - Challenges
+- Adding percentage to a barplot (variable = non-numerical).
+- How to perform multiple comparison or group barplots to show grade 1, 2 and 3 or G1, G2, G3. 
+- How to add mean on boxplot for all grades (G1, G2 and G3), or how to plot mean of two variables side by side for all grades (G1, G2 and G3).
+- Issue with knit: in order to knit this project from Rmardown, we have to comment out the Rsql chunck code which works fine.
+- Some times a function works, describe(), describeBy and later does not work.
+- Struggled how to do a better project presentation in Rmarkdown.
+- Dealing with slow computer during this project was little painful.
+
+
+## References
+
+1. https://fall2020.data606.net/assignments/labs/
+
+2. file:///C:/Users/Petit%20Mandela/Documents/R/DATA606_Lab7/DATA606_Lab7/DATA606_Lab7.html
+
+3. https://www.statisticshowto.com/least-squares-regression-line/
+
+4. https://rcompanion.org/handbook/C_04.html
+
+5. https://data-flair.training/blogs/t-tests-in-r/
+
+6. https://rstatisticsblog.com/data-science-in-action/data-preprocessing/hypothesis-testing-in-r-with-examples-interpretations/
+
+7. https://www.r-graph-gallery.com/all-graphs.html
+
+8. http://www.sthda.com/english/wiki/ggplot2-barplot-easy-bar-graphs-in-r-software-using-ggplot2

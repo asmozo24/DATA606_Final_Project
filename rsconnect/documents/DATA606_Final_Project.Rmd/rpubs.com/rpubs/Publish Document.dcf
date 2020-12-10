@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/701875/3811675e7f064002848bd389214c510a
+bundleId: https://api.rpubs.com/api/v1/document/701875/3811675e7f064002848bd389214c510a
+url: http://rpubs.com/amekueko/701875
+when: 1607476612.18294
